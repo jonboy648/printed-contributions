@@ -1,0 +1,31 @@
+name: Printed contributions
+description: Draw your GitHub contribution year as a 3D print. A nozzle sweeps across and lays down each week, in dark and light versions.
+author: jonboy648
+branding:
+  icon: layers
+  color: orange
+inputs:
+  username:
+    description: Whose contributions to draw.
+    default: ${{ github.repository_owner }}
+  output_dir:
+    description: Folder the two SVGs are written to.
+    default: assets
+  token:
+    description: Token for the GitHub GraphQL API. The workflow's own token is enough.
+    default: ${{ github.token }}
+runs:
+  using: composite
+  steps:
+    - name: Fetch the contribution calendar
+      shell: bash
+      env:
+        GH_TOKEN: ${{ inputs.token }}
+        LOGIN: ${{ inputs.username }}
+      run: |
+        gh api graphql -F login="$LOGIN" -f query='query($login:String!){user(login:$login){contributionsCollection{contributionCalendar{totalContributions weeks{contributionDays{date contributionCount}}}}}}' > "$RUNNER_TEMP/calendar.json"
+    - name: Draw it
+      shell: bash
+      env:
+        OUT: ${{ inputs.output_dir }}
+      run: python3 "$GITHUB_ACTION_PATH/printed_contributions.py" "$RUNNER_TEMP/calendar.json" "$OUT"
